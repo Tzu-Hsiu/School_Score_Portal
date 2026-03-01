@@ -15,9 +15,14 @@ st.title("📊 學生學習深度分析系統 (Advanced Student Analytics)")
 def load_data():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
-    # NEW CODE: Tell Streamlit to read from the secure cloud vault
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
-    
+    # Smart Fallback: Try Cloud Secrets first, fallback to local JSON file
+    try:
+        # This will work when deployed on Streamlit Cloud
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gcp_service_account"], scope)
+    except (FileNotFoundError, KeyError):
+        # This will work when you are testing locally on your Mac
+        creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+        
     client = gspread.authorize(creds)
     sheet = client.open("School_Master_Score").sheet1 
     data = sheet.get_all_records()
