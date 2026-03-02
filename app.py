@@ -64,9 +64,13 @@ st.markdown("請輸入學號與專屬密碼來查詢成績 (Please enter Student
 df['StudentID'] = df['StudentID'].astype(str)
 df['Pin'] = df['Pin'].astype(str)
 
+# NEW: Look at the web link to see if an ID was passed in
+default_id = st.query_params.get("id", "")
+
 col1, col2 = st.columns(2)
 with col1:
-    user_id = st.text_input("學號 / 帳號 (ID)")
+    # Set the value to the default_id we grabbed from the link!
+    user_id = st.text_input("學號 / 帳號 (ID)", value=default_id)
 with col2:
     user_pin = st.text_input("密碼 (PIN)", type="password")
 
