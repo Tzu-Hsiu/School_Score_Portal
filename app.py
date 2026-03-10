@@ -7,6 +7,9 @@ import re
 import plotly.express as px
 import plotly.graph_objects as go
 
+# ADD THIS LINE HERE:
+pd.set_option('future.no_silent_downcasting', True)
+
 st.set_page_config(page_title="Student Score Portal", layout="wide")
 st.title("📊 學生學習深度分析系統 (Advanced Student Analytics)")
 
