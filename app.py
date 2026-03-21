@@ -429,11 +429,11 @@ try: TEACHER_SECURE_PIN = str(st.secrets["teacher"]["pin"])
 except: TEACHER_SECURE_PIN = None
 
 try: VIRTUAL_SECURE_PIN = str(st.secrets["virtual"]["pin"])
-except: VIRTUAL_SECURE_PIN = '777'
+except: VIRTUAL_SECURE_PIN = None
 
 if login_button:
-    is_virtual = (user_id == '777' and user_pin == VIRTUAL_SECURE_PIN)
-    is_teacher = (user_id == '77777' and user_pin == TEACHER_SECURE_PIN and TEACHER_SECURE_PIN is not None)
+    is_virtual = (user_id == 'demo' and user_pin == VIRTUAL_SECURE_PIN and TEACHER_SECURE_PIN is not None)
+    is_teacher = (user_id == 'teacher' and user_pin == TEACHER_SECURE_PIN and TEACHER_SECURE_PIN is not None)
     
     if is_teacher:
         st.session_state.logged_in, st.session_state.is_teacher, st.session_state.is_virtual_account = True, True, False
