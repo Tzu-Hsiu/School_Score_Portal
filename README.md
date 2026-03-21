@@ -58,7 +58,7 @@ If you are a teacher with no programming background, don't worry! You can set up
 pin = "your_teacher_password_here"
 
 [virtual]
-pin = "your_parents/public_password_here"
+pin = "your_demo_password_here"
 *(This account just presents simple static data. You can use it as a demo account.)*
 
 [gcp_service_account]
