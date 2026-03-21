@@ -1,2 +1,20 @@
-credentials.json
-Score_Portal_QR.png
+# Streamlit secrets (CRITICAL)
+.streamlit/secrets.toml
+
+# Google Cloud credentials files
+*.json
+
+# Local data files / Student PII
+*.csv
+*.xlsx
+*.html
+
+# Python standard ignores
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# QR code images
+*.png
