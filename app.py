@@ -432,7 +432,7 @@ try: VIRTUAL_SECURE_PIN = str(st.secrets["virtual"]["pin"])
 except: VIRTUAL_SECURE_PIN = None
 
 if login_button:
-    is_virtual = (user_id == 'demo' and user_pin == VIRTUAL_SECURE_PIN and TEACHER_SECURE_PIN is not None)
+    is_virtual = (user_id == 'demo' and user_pin == VIRTUAL_SECURE_PIN and VIRTUAL_SECURE_PIN is not None)
     is_teacher = (user_id == 'teacher' and user_pin == TEACHER_SECURE_PIN and TEACHER_SECURE_PIN is not None)
     
     if is_teacher:
