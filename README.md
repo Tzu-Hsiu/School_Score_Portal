@@ -15,6 +15,22 @@ By replacing complex spreadsheets with an interactive, visual dashboard, this to
 
 ---
 
+## 🏗️ Project Architecture
+
+Our application follows a modular architecture for maintainability and clean code organization:
+
+* **`app.py`**: The main entry point that routes traffic and initializes the Streamlit application.
+* **`core/`**: Core utilities and data management.
+  * `data_loader.py`: Connects to Google Sheets, loads the DataFrame, and parses exams.
+  * `auth.py`: Encapsulates login logic and session state initialization.
+* **`reports/`**: 
+  * `html_generator.py`: Contains the logic for bulk HTML report generation and Plotly charts.
+* **`views/`**: Streamlit UI pages.
+  * `admin.py`: The Teacher Admin Panel tabs.
+  * `dashboard.py`: The Student and Class Overview Dashboard tabs.
+
+---
+
 ## 🚀 Step-by-Step Deployment Guide for Teachers
 
 If you are a teacher with no programming background, don't worry! You can set up your own version of this system by following these four phases.
@@ -41,8 +57,11 @@ If you are a teacher with no programming background, don't worry! You can set up
 ### Phase 3: Upload to the Cloud (GitHub)
 1. Create a free account on [GitHub](https://github.com/).
 2. Create a **New Repository** (name it something like `student-score-portal`) and make it Public.
-3. Click **Upload files** and drag-and-drop the following files into your repository:
-   * `app.py` (The main program code)
+3. Click **Upload files** and drag-and-drop the following folders and files into your repository:
+   * `app.py` (The main program orchestrator)
+   * `core/` folder (Contains data loading and authentication logic)
+   * `views/` folder (Contains UI dashboards for admins and students)
+   * `reports/` folder (Contains report generation logic)
    * `requirements.txt` (Tells the server what tools to install)
    * `.gitignore` (Keeps your passwords safe)
 4. Click **Commit changes** to save.
