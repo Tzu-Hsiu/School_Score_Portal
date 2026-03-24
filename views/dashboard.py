@@ -248,27 +248,61 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
     with tab3:
         st.subheader("歷年表現趨勢圖 (Historical Performance Trend)")
         all_trackable = col_info['Subject'].unique().tolist()
-        
-        if is_virtual:
-            track_options = []
-            for opt in [s for s in all_trackable if s != '班排']:
-                track_options.append(f"{opt} - 班級平均")
-        else:
-            track_options = [
-                '總分 - 學生分數', '總分 - 班級平均',
-                '平均 - 學生分數', '平均 - 班級平均',
-                '班排', '校排'
-            ]
-            track_options += [f"{s} - 學生分數" for s in all_trackable if s not in exclude_stats]
-            track_options += [f"{s} - 班級平均" for s in all_trackable if s not in exclude_stats]
 
-        selected_tracks = st.multiselect("選擇要追蹤的指標 (Select Metrics)", track_options, default=track_options[:4] if track_options else [])
-        
+        if is_virtual:
+            track_options = [f"{s} - 班級平均" for s in all_trackable if s != '班排']
+            selected_tracks = st.multiselect("選擇要追蹤的指標 (Select Metrics)", track_options, default=track_options[:3] if track_options else [])
+        else:
+            student_options = ['總分 - 學生分數', '平均 - 學生分數'] + [f"{s} - 學生分數" for s in all_trackable if s not in exclude_stats]
+            class_options = ['總分 - 班級平均', '平均 - 班級平均'] + [f"{s} - 班級平均" for s in all_trackable if s not in exclude_stats]
+            rank_options = ['班排', '校排']
+
+            st.markdown("**符號說明**：紅色=學生、藍色=班級平均、綠色=排名")
+            selected_student = st.multiselect("個人指標 (Student Metrics)", student_options, default=['總分 - 學生分數'])
+            selected_class = st.multiselect("班級平均指標 (Class Avg Metrics)", class_options, default=['總分 - 班級平均'])
+            selected_rank = st.multiselect("排名指標 (Rank Metrics)", rank_options, default=['班排'])
+
+            selected_tracks = selected_student + selected_class + selected_rank
+
+            if selected_student:
+                auto_add = []
+                for t in selected_student:
+                    pair = t.replace('學生分數', '班級平均')
+                    if pair in class_options and pair not in selected_class:
+                        auto_add.append(pair)
+                if auto_add:
+                    st.info(f"已自動加入對應班級平均: {', '.join(auto_add)}")
+                    selected_tracks += auto_add
+
+        if not is_virtual and selected_tracks:
+            auto_selected = []
+            for item in selected_tracks:
+                if item.endswith(' - 學生分數'):
+                    paired = item.replace(' - 學生分數', ' - 班級平均')
+                    if paired in class_options and paired not in selected_tracks:
+                        auto_selected.append(paired)
+            if auto_selected:
+                selected_tracks = selected_tracks + auto_selected
+                st.info(f"已自動加入班級平均比較: {', '.join(auto_selected)}")
+
         if selected_tracks:
+            # 加入選科目過濾選單（可快速聚焦單一科目）
+            subject_filter_options = ['全部'] + [s for s in all_trackable if s not in ['總分', '平均', '班排', '校排']]
+            subject_filter = st.selectbox('只看選科目 (Filter by Subject)', subject_filter_options, index=0)
+            if subject_filter != '全部':
+                filter_selected = [t for t in selected_tracks if t.startswith(f'{subject_filter} - ')]
+                if not filter_selected:
+                    st.warning(f'目前已選指標無 {subject_filter}，請調整選單或變更科目篩選。')
+                else:
+                    selected_tracks = filter_selected
+
             trend_data = []
+            selected_success = set()
+            requested_metrics = set(selected_tracks)
+
             for ex in available_exams:
                 ex_cols = col_info[col_info['Exam_Label'] == ex]
-                
+
                 for track in selected_tracks:
                     val = np.nan
                     if track in ['班排', '校排']:
@@ -283,17 +317,47 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
                         if len(c_name) > 0:
                             col = c_name[0]
                             if mode == '班級平均' and col in df.columns:
-                                val = df[col].dropna().mean()
+                                col_vals = df[col].dropna()
+                                if not col_vals.empty:
+                                    val = col_vals.mean()
                             elif mode == '學生分數' and col in student_data.columns:
                                 val = student_data[col].iloc[0]
 
                     if pd.notna(val):
                         trend_data.append({"Exam": ex, "Metric": track, "Value": val})
-                        
+                        selected_success.add(track)
+
+            missing = requested_metrics - selected_success
+            if missing:
+                st.warning(f"以下指標缺少資料，已跳過顯示：{', '.join(sorted(missing))}")
+
             if trend_data:
                 trend_df = pd.DataFrame(trend_data)
-                fig_trend = px.line(trend_df, x="Exam", y="Value", color="Metric", markers=True, title="歷年成績趨勢 (Trend Line)")
-                
+
+                color_map = {}
+                for t in selected_tracks:
+                    if t.endswith('學生分數'):
+                        color_map[t] = '#FF4B4B'
+                    elif t.endswith('班級平均'):
+                        color_map[t] = '#636EFA'
+                    elif t in ['班排', '校排']:
+                        color_map[t] = '#2CA02C'
+                    else:
+                        color_map[t] = '#888888'
+
+                fig_trend = px.line(
+                    trend_df, x="Exam", y="Value", color="Metric", markers=True,
+                    title="歷年成績趨勢 (Trend Line)", color_discrete_map=color_map
+                )
+
+                # hover + text 強化（十字準心與數值標籤）
+                fig_trend.update_traces(
+                    mode='lines+markers+text',
+                    texttemplate='%{y:.1f}',
+                    textposition='top center',
+                    hovertemplate='考試: %{x}<br>%{fullData.name}: %{y:.1f}<extra></extra>'
+                )
+
                 fig_trend.update_layout(
                     xaxis_title="考試 (Exam)", yaxis_title="分數 / 排名 (Score / Rank)", 
                     margin=dict(l=0, r=0, t=40, b=0),
@@ -302,7 +366,18 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
                 
                 if any(m in ["班排", "校排"] for m in selected_tracks):
                      fig_trend.update_yaxes(autorange="reversed")
-                     
+
+                for trace in fig_trend.data:
+                    if '學生分數' in trace.name:
+                        trace.line.dash = 'solid'
+                        trace.marker.color = '#FF4B4B'
+                    elif '班級平均' in trace.name:
+                        trace.line.dash = 'dash'
+                        trace.marker.color = '#636EFA'
+                    elif trace.name in ['班排', '校排']:
+                        trace.line.dash = 'dot'
+                        trace.marker.color = '#2CA02C'
+
                 st.plotly_chart(fig_trend, use_container_width=True)
             else:
                 st.info("尚無足夠的歷史資料可供呈現趨勢。")
