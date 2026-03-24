@@ -515,8 +515,19 @@ def render_dashboard():
                     elif val < 0: return 'color: red; font-weight: bold;'
                     return 'color: gray;'
                 
-                # Apply style to difference columns
-                styled_df = transcript_df.style.map(highlight_diff, subset=diff_cols) if diff_cols else transcript_df
+                # Format to avoid too many decimal places on CSV export
+                for col in transcript_df.select_dtypes(include=[np.number]).columns:
+                    transcript_df[col] = transcript_df[col].round(1)
+                
+                # Apply format strictly on standard Styler payload so PyArrow sends exactly trimmed strings to frontend
+                styled_df = transcript_df.style
+                if diff_cols:
+                    styled_df = styled_df.map(highlight_diff, subset=diff_cols)
+                # Formatter that clears NaNs and drops trailing zeros strictly (e.g. 5.10000... -> "5.1", 95.0 -> "95")
+                def safe_fmt(v):
+                    if pd.isna(v): return ""
+                    return f"{float(v):g}" 
+                styled_df = styled_df.format(safe_fmt, subset=transcript_df.select_dtypes(include=[np.number]).columns)
                 
                 st.dataframe(styled_df, use_container_width=True, hide_index=True)
                 csv_exam = transcript_df.to_csv(index=False).encode('utf-8-sig')
