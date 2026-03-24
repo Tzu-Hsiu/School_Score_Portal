@@ -288,7 +288,20 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
         if selected_tracks:
             # 加入選科目過濾選單（可快速聚焦單一科目）
             subject_filter_options = ['全部'] + [s for s in all_trackable if s not in ['總分', '平均', '班排', '校排']]
-            subject_filter = st.selectbox('只看選科目 (Filter by Subject)', subject_filter_options, index=0)
+            if 'subject_filter' not in st.session_state:
+                st.session_state.subject_filter = '全部'
+
+            subject_filter = st.selectbox(
+                '只看選科目 (Filter by Subject)',
+                subject_filter_options,
+                index=subject_filter_options.index(st.session_state.subject_filter),
+                key='subject_filter'
+            )
+
+            if st.button('顯示全部', key='reset_subject'):
+                st.session_state.subject_filter = '全部'
+                st.experimental_rerun()
+
             if subject_filter != '全部':
                 filter_selected = [t for t in selected_tracks if t.startswith(f'{subject_filter} - ')]
                 if not filter_selected:

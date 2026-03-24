@@ -11,6 +11,17 @@ pd.set_option('future.no_silent_downcasting', True)
 st.set_page_config(page_title="Student Score Portal", layout="wide")
 st.title("📊 學生學習深度分析系統 (Advanced Student Analytics)")
 
+# --- 快速切換/登出區塊 ---
+if 'logged_in' in st.session_state and st.session_state.logged_in:
+    st.markdown(f"**目前登入：{st.session_state.student_name} ({'教師' if st.session_state.is_teacher else '學生'})**")
+    if st.button("🔁 切換帳號 / 登出"):
+        st.session_state.logged_in = False
+        st.session_state.student_data = None
+        st.session_state.student_name = ''
+        st.session_state.is_virtual_account = False
+        st.session_state.is_teacher = False
+        st.experimental_rerun()
+
 # --- 1. Initialize State and Load Data ---
 init_session_state()
 df, col_info, available_exams, exclude_stats = initialize_data()
