@@ -254,9 +254,15 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
             for opt in [s for s in all_trackable if s != '班排']:
                 track_options.append(f"{opt} - 班級平均")
         else:
-            track_options = ['總分', '平均', '班排', '校排'] + [f"{s} - 學生分數" for s in all_trackable if s not in exclude_stats]
+            track_options = [
+                '總分 - 學生分數', '總分 - 班級平均',
+                '平均 - 學生分數', '平均 - 班級平均',
+                '班排', '校排'
+            ]
+            track_options += [f"{s} - 學生分數" for s in all_trackable if s not in exclude_stats]
+            track_options += [f"{s} - 班級平均" for s in all_trackable if s not in exclude_stats]
 
-        selected_tracks = st.multiselect("選擇要追蹤的指標 (Select Metrics)", track_options, default=track_options[:2] if track_options else [])
+        selected_tracks = st.multiselect("選擇要追蹤的指標 (Select Metrics)", track_options, default=track_options[:4] if track_options else [])
         
         if selected_tracks:
             trend_data = []
@@ -265,17 +271,22 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
                 
                 for track in selected_tracks:
                     val = np.nan
-                    if "班級平均" in track:
-                        subj = track.split(" - ")[0]
-                        c_name = ex_cols[ex_cols['Subject'] == subj]['Original_Col'].values
-                        if len(c_name) > 0 and c_name[0] in df.columns:
-                            val = df[c_name[0]].dropna().mean()
-                    else:
-                        subj = track.split(" - ")[0] if " - " in track else track
-                        c_name = ex_cols[ex_cols['Subject'] == subj]['Original_Col'].values
+                    if track in ['班排', '校排']:
+                        c_name = ex_cols[ex_cols['Subject'] == track]['Original_Col'].values
                         if len(c_name) > 0 and c_name[0] in student_data.columns:
                             val = student_data[c_name[0]].iloc[0]
-                    
+                    else:
+                        parts = track.split(' - ')
+                        subj = parts[0]
+                        mode = parts[1] if len(parts) > 1 else '學生分數'
+                        c_name = ex_cols[ex_cols['Subject'] == subj]['Original_Col'].values
+                        if len(c_name) > 0:
+                            col = c_name[0]
+                            if mode == '班級平均' and col in df.columns:
+                                val = df[col].dropna().mean()
+                            elif mode == '學生分數' and col in student_data.columns:
+                                val = student_data[col].iloc[0]
+
                     if pd.notna(val):
                         trend_data.append({"Exam": ex, "Metric": track, "Value": val})
                         
