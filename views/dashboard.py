@@ -89,8 +89,9 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
             crank_delta = p_crank - c_rank if pd.notna(c_rank) and pd.notna(p_crank) else None
             srank_delta = p_srank - s_rank if pd.notna(s_rank) and pd.notna(p_srank) else None
 
-            c_pct_str = f"(Top {(c_rank / c_total * 100):.1f}%)" if pd.notna(c_rank) and c_total > 0 else ""
-            s_pct_str = f"(Top {(s_rank / 520 * 100):.1f}%)" if pd.notna(s_rank) else ""
+            # 依照 "排名越小越好" 進行 Top 百分比計算
+            c_pct_str = f"(Top {(1 - (c_rank - 1) / c_total) * 100:.1f}%)" if pd.notna(c_rank) and c_total > 0 else ""
+            s_pct_str = f"(Top {(1 - (s_rank - 1) / 520) * 100:.1f}%)" if pd.notna(s_rank) else ""
 
             kpi_cols[0].metric(
                 "總分 (Total)", 
@@ -249,18 +250,33 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
         st.subheader("歷年表現趨勢圖 (Historical Performance Trend)")
         all_trackable = col_info['Subject'].unique().tolist()
 
+        st.markdown("### 📌 可選指標清單 (Trend Options)")
         if is_virtual:
-            track_options = [f"{s} - 班級平均" for s in all_trackable if s != '班排']
-            selected_tracks = st.multiselect("選擇要追蹤的指標 (Select Metrics)", track_options, default=track_options[:3] if track_options else [])
+            st.write("- 科目類：`<科目> - 班級平均`，例如：國文 - 班級平均、英文 - 班級平均")
+            st.write("- 排名類：校排 - 班級平均、班排 - 班級平均（順序越小越好）")
+        else:
+            st.write("- 學生類：總分 - 學生分數、平均 - 學生分數、科目 - 學生分數")
+            st.write("- 班級類：總分 - 班級平均、平均 - 班級平均、科目 - 班級平均")
+            st.write("- 排名類：班排、校排（排名越小越好，圖表自動反轉 y 軸）")
+        st.write("---")
+
+        if is_virtual:
+            track_options = [f"{s} - 班級平均" for s in all_trackable if s not in ['班排']]
+            # 排名越小越好，校排/班排需反向顯示（低分為較優）
+            if '校排' in all_trackable:
+                track_options.append('校排 - 班級平均')
+            if '班排' in all_trackable:
+                track_options.append('班排 - 班級平均')
+            selected_tracks = st.multiselect("選擇要追蹤的指標 (Select Metrics)", track_options, default=[])
         else:
             student_options = ['總分 - 學生分數', '平均 - 學生分數'] + [f"{s} - 學生分數" for s in all_trackable if s not in exclude_stats]
             class_options = ['總分 - 班級平均', '平均 - 班級平均'] + [f"{s} - 班級平均" for s in all_trackable if s not in exclude_stats]
             rank_options = ['班排', '校排']
 
             st.markdown("**符號說明**：紅色=學生、藍色=班級平均、綠色=排名")
-            selected_student = st.multiselect("個人指標 (Student Metrics)", student_options, default=['總分 - 學生分數'])
-            selected_class = st.multiselect("班級平均指標 (Class Avg Metrics)", class_options, default=['總分 - 班級平均'])
-            selected_rank = st.multiselect("排名指標 (Rank Metrics)", rank_options, default=['班排'])
+            selected_student = st.multiselect("個人指標 (Student Metrics)", student_options, default=[])
+            selected_class = st.multiselect("班級平均指標 (Class Avg Metrics)", class_options, default=[])
+            selected_rank = st.multiselect("排名指標 (Rank Metrics)", rank_options, default=[])
 
             selected_tracks = selected_student + selected_class + selected_rank
 
@@ -300,7 +316,7 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
 
             if st.button('顯示全部', key='reset_subject'):
                 st.session_state.subject_filter = '全部'
-                st.experimental_rerun()
+                st.rerun()
 
             if subject_filter != '全部':
                 filter_selected = [t for t in selected_tracks if t.startswith(f'{subject_filter} - ')]
@@ -377,7 +393,7 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
                     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
                 )
                 
-                if any(m in ["班排", "校排"] for m in selected_tracks):
+                if any('班排' in m or '校排' in m for m in selected_tracks):
                      fig_trend.update_yaxes(autorange="reversed")
 
                 for trace in fig_trend.data:

@@ -20,7 +20,7 @@ if 'logged_in' in st.session_state and st.session_state.logged_in:
         st.session_state.student_name = ''
         st.session_state.is_virtual_account = False
         st.session_state.is_teacher = False
-        st.experimental_rerun()
+        st.rerun()
 
 # --- 1. Initialize State and Load Data ---
 init_session_state()
