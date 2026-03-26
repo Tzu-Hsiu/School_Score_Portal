@@ -67,5 +67,34 @@ def initialize_data():
         df['StudentID'] = df['StudentID'].astype(str)
     if 'Pin' in df.columns:
         df['Pin'] = df['Pin'].astype(str)
+    
+    # Calculate missing total scores, averages, and class ranks
+    for exam in available_exams:
+        exam_df = col_info[col_info['Exam_Label'] == exam]
+        exam_cols = exam_df['Original_Col'].tolist()
+        subject_cols = [col for col in exam_cols if exam_df.loc[exam_df['Original_Col'] == col, 'Subject'].iloc[0] not in exclude_stats]
         
+        total_col = next((col for col in exam_cols if exam_df.loc[exam_df['Original_Col'] == col, 'Subject'].iloc[0] == '總分'), None)
+        avg_col = next((col for col in exam_cols if exam_df.loc[exam_df['Original_Col'] == col, 'Subject'].iloc[0] == '平均'), None)
+        crank_col = next((col for col in exam_cols if exam_df.loc[exam_df['Original_Col'] == col, 'Subject'].iloc[0] == '班排'), None)
+        
+        if total_col and subject_cols:
+            mask = df[total_col].isna()
+            if mask.any():
+                df.loc[mask, total_col] = df.loc[mask, subject_cols].sum(axis=1, skipna=True)
+        
+        if avg_col and total_col and subject_cols:
+            mask = df[avg_col].isna()
+            if mask.any():
+                num_subjects = len(subject_cols)
+                df.loc[mask, avg_col] = df.loc[mask, total_col] / num_subjects
+        
+        if crank_col and total_col:
+            mask = df[crank_col].isna()
+            if mask.any():
+                valid_mask = df[total_col].notna()
+                if valid_mask.any():
+                    ranks = df.loc[valid_mask, total_col].rank(method='min', ascending=False)
+                    df.loc[valid_mask, crank_col] = ranks
+    
     return df, col_info, available_exams, exclude_stats
