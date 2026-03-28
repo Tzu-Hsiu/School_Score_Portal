@@ -78,13 +78,23 @@ def initialize_data():
         avg_col = next((col for col in exam_cols if exam_df.loc[exam_df['Original_Col'] == col, 'Subject'].iloc[0] == '平均'), None)
         crank_col = next((col for col in exam_cols if exam_df.loc[exam_df['Original_Col'] == col, 'Subject'].iloc[0] == '班排'), None)
         
+        # Check if the whole class has no scores for this exam (all NaN in subject_cols)
+        if subject_cols and df[subject_cols].isna().all().all():
+            continue  # Skip calculating stats if no scores entered yet
+        
         if total_col and subject_cols:
             mask = df[total_col].isna()
             if mask.any():
-                df.loc[mask, total_col] = df.loc[mask, subject_cols].sum(axis=1, skipna=True)
+                # For each student, if all subjects are NaN, total = NaN; else sum with NaN filled as 0
+                for idx in df[mask].index:
+                    student_scores = df.loc[idx, subject_cols]
+                    if student_scores.isna().all():
+                        df.loc[idx, total_col] = np.nan
+                    else:
+                        df.loc[idx, total_col] = student_scores.fillna(0).sum()
         
         if avg_col and total_col and subject_cols:
-            mask = df[avg_col].isna()
+            mask = df[avg_col].isna() & df[total_col].notna()
             if mask.any():
                 num_subjects = len(subject_cols)
                 df.loc[mask, avg_col] = df.loc[mask, total_col] / num_subjects
