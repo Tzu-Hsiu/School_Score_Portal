@@ -96,8 +96,9 @@ def initialize_data():
         if avg_col and total_col and subject_cols:
             mask = df[avg_col].isna() & df[total_col].notna()
             if mask.any():
-                num_subjects = len(subject_cols)
-                df.loc[mask, avg_col] = df.loc[mask, total_col] / num_subjects
+                # Calculate average based on the number of subjects each student actually took (non-NaN scores)
+                num_subjects_per_student = df.loc[mask, subject_cols].notna().sum(axis=1)
+                df.loc[mask, avg_col] = df.loc[mask, total_col] / num_subjects_per_student
         
         if crank_col and total_col:
             mask = df[crank_col].isna()
