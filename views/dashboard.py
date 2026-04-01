@@ -159,10 +159,12 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
         stats_df = pd.DataFrame(stats_list)
         
         if not stats_df.empty:
+            has_student_scores = '學生分數 (Score)' in stats_df.columns and stats_df['學生分數 (Score)'].notna().any()
             col_chart1, col_chart2 = st.columns([3, 2])
             with col_chart1:
-                st.write("**📊 班級各科平均表現**" if is_virtual else "**📊 成績對比圖 (Grouped Bar)**")
-                if is_virtual:
+                show_class_only = is_virtual or not has_student_scores
+                st.write("**📊 班級各科平均表現**" if show_class_only else "**📊 成績對比圖 (Grouped Bar)**")
+                if show_class_only:
                     fig_bar = px.bar(stats_df, x='科目 (Subject)', y='班級平均 (Class Avg)', text_auto='.1f', color_discrete_sequence=['#636EFA'])
                 else:
                     melted_df = stats_df.melt(id_vars='科目 (Subject)', value_vars=['學生分數 (Score)', '班級平均 (Class Avg)'], var_name='類別 (Type)', value_name='分數 (Score)')
@@ -171,9 +173,9 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
                 st.plotly_chart(fig_bar, use_container_width=True)
                 
             with col_chart2:
-                st.write("**🕸️ 班級能力雷達圖**" if is_virtual else "**🕸️ 能力雷達圖 (Radar Chart)**")
+                st.write("**🕸️ 班級能力雷達圖**" if show_class_only else "**🕸️ 能力雷達圖 (Radar Chart)**")
                 fig_radar_web = go.Figure()
-                if is_virtual:
+                if show_class_only:
                     fig_radar_web.add_trace(go.Scatterpolar(r=stats_df['班級平均 (Class Avg)'], theta=stats_df['科目 (Subject)'], fill='toself', name='班級平均', line_color='#636EFA'))
                 else:
                     fig_radar_web.add_trace(go.Scatterpolar(r=stats_df['學生分數 (Score)'], theta=stats_df['科目 (Subject)'], fill='toself', name='學生分數', line_color='#FF4B4B'))
@@ -232,7 +234,12 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
         st.subheader(f"{selected_exam} - 深度數據分析 (Deep Statistical Breakdown)")
         st.markdown("* **排除0分平均:** 扣除缺考(0分)同學後的實際班級平均，更能反映真實難度。")
         if not stats_df.empty:
-            if not is_virtual:
+            has_student_metrics = (
+                not is_virtual
+                and '學生分數 (Score)' in stats_df.columns
+                and stats_df['學生分數 (Score)'].notna().any()
+            )
+            if has_student_metrics:
                 st.markdown("* **Z分數 (Z-Score):** 大於 0 代表高於平均，大於 1 代表在班上屬於前段班。\n* **百分等級 (PR):** PR85 代表該生成績贏過班上 85% 的同學。")
                 def highlight_z(x):
                     if pd.isna(x): return ''
