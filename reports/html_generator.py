@@ -137,10 +137,10 @@ def generate_html_reports(exam_label, df_source_student, df_source_class, col_in
         avg = f"{curr_avg_val:g}" if pd.notna(curr_avg_val) else '-'
         
         crank_base = f"{curr_crank_val:g} / {c_total_html}" if pd.notna(curr_crank_val) and c_total_html > 0 else '-'
-        crank_top_html = f"<div class='kpi-top-pct'>(Top {(1 - (curr_crank_val - 1) / c_total_html) * 100:.1f}%)</div>" if pd.notna(curr_crank_val) and c_total_html > 0 else ""
+        crank_top_html = f"<div class='kpi-top-pct'>(Top {(curr_crank_val / c_total_html) * 100:.1f}%)</div>" if pd.notna(curr_crank_val) and c_total_html > 0 else ""
 
         srank_base = f"{curr_srank_val:g} / 520" if pd.notna(curr_srank_val) else '-'
-        srank_top_html = f"<div class='kpi-top-pct'>(Top {(1 - (curr_srank_val - 1) / 520) * 100:.1f}%)</div>" if pd.notna(curr_srank_val) else ""
+        srank_top_html = f"<div class='kpi-top-pct'>(Top {(curr_srank_val / 520) * 100:.1f}%)</div>" if pd.notna(curr_srank_val) else ""
         
         tot_prog_html, avg_prog_html, crank_prog_html, srank_prog_html = "", "", "", ""
         

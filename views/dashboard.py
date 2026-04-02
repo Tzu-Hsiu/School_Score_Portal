@@ -90,8 +90,8 @@ def render(df, col_info, available_exams, exclude_stats, is_virtual, student_dat
             srank_delta = p_srank - s_rank if pd.notna(s_rank) and pd.notna(p_srank) else None
 
             # 依照 "排名越小越好" 進行 Top 百分比計算
-            c_pct_str = f"(Top {(1 - (c_rank - 1) / c_total) * 100:.1f}%)" if pd.notna(c_rank) and c_total > 0 else ""
-            s_pct_str = f"(Top {(1 - (s_rank - 1) / 520) * 100:.1f}%)" if pd.notna(s_rank) else ""
+            c_pct_str = f"(Top {(c_rank / c_total) * 100:.1f}%)" if pd.notna(c_rank) and c_total > 0 else ""
+            s_pct_str = f"(Top {(s_rank / 520) * 100:.1f}%)" if pd.notna(s_rank) else ""
 
             kpi_cols[0].metric(
                 "總分 (Total)", 
