@@ -2,16 +2,17 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 import re
+from core.constants import EXCLUDE_STATS
 
 @st.cache_data(ttl=600)
 def load_data():
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    scopes = ["https://www.googleapis.com/auth/spreadsheets.readonly", "https://www.googleapis.com/auth/drive.readonly"]
     
     try:
         gcp_creds = dict(st.secrets["gcp_service_account"])
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(gcp_creds, scope)
+        creds = Credentials.from_service_account_info(gcp_creds, scopes=scopes)
     except KeyError:
         st.error("找不到 `gcp_service_account` 憑證！請確認你的 `.streamlit/secrets.toml` 檔案設定正確。")
         st.stop()
@@ -31,10 +32,14 @@ def load_data():
 
 def parse_columns(columns):
     parsed_data = []
+    unmatched = []
     pattern = r"(?P<year>\w+)_(?P<sem>\w+)_(?P<type>[EQ])_(?P<num>[\w\-]+)_+\{(?P<subject>.*?)\}_+\{(?P<detail>.*?)\}"
     for col in columns:
         match = re.match(pattern, str(col))
         if match:
+            detail = match.group("detail")
+            if any(keyword in detail for keyword in ['取消', 'Cancel', '延期', 'Postpone', 'Delay']):
+                continue
             exam_label = f"{match.group('year')}-{match.group('sem')} 段考{match.group('num')}"
             parsed_data.append({
                 "Original_Col": col,
@@ -45,6 +50,15 @@ def parse_columns(columns):
                 "Subject": match.group("subject"),
                 "Exam_Label": exam_label
             })
+        elif col not in ('StudentID', 'Name', 'Pin', 'Number', 'Class'):
+            unmatched.append(col)
+
+    if unmatched:
+        st.warning(
+            f"⚠️ {len(unmatched)} 個欄位無法解析，可能是命名格式不正確：\n"
+            f"`{'`, `'.join(unmatched[:5])}`"
+            + (f"... 等 {len(unmatched)} 個" if len(unmatched) > 5 else "")
+        )
     return pd.DataFrame(parsed_data)
 
 
@@ -55,7 +69,7 @@ def initialize_data():
     if not col_info.empty:
         col_info.sort_values(by=['Year', 'Semester', 'Number'], inplace=True)
     available_exams = col_info['Exam_Label'].unique().tolist() if not col_info.empty else []
-    exclude_stats = ['總分', '平均', '班排', '校排']
+    exclude_stats = EXCLUDE_STATS
 
     # --- OPTIMIZATION: Convert all exam columns to numeric upfront ---
     exam_cols = col_info['Original_Col'].tolist() if not col_info.empty else []
@@ -85,13 +99,9 @@ def initialize_data():
         if total_col and subject_cols:
             mask = df[total_col].isna()
             if mask.any():
-                # For each student, if all subjects are NaN, total = NaN; else sum with NaN filled as 0
-                for idx in df[mask].index:
-                    student_scores = df.loc[idx, subject_cols]
-                    if student_scores.isna().all():
-                        df.loc[idx, total_col] = np.nan
-                    else:
-                        df.loc[idx, total_col] = student_scores.fillna(0).sum()
+                subset = df.loc[mask, subject_cols]
+                all_nan = subset.isna().all(axis=1)
+                df.loc[mask & ~all_nan, total_col] = subset.loc[~all_nan].fillna(0).sum(axis=1)
         
         if avg_col and total_col and subject_cols:
             mask = df[avg_col].isna() & df[total_col].notna()

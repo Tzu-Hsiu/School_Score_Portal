@@ -1,7 +1,10 @@
 import streamlit as st
 import pandas as pd
+import time
 
 def init_session_state():
+    if 'login_attempts' not in st.session_state:
+        st.session_state.login_attempts = []
     if 'logged_in' not in st.session_state:
         st.session_state.logged_in = False
         st.session_state.is_virtual_account = False
@@ -21,13 +24,28 @@ def render_login_ui(df):
 
     login_button = st.button("登入查詢 (Login)")
 
-    try: TEACHER_SECURE_PIN = str(st.secrets["teacher"]["pin"])
-    except: TEACHER_SECURE_PIN = None
+    try:
+        TEACHER_SECURE_PIN = str(st.secrets["teacher"]["pin"])
+    except (KeyError, FileNotFoundError):
+        TEACHER_SECURE_PIN = None
 
-    try: VIRTUAL_SECURE_PIN = str(st.secrets["virtual"]["pin"])
-    except: VIRTUAL_SECURE_PIN = None
+    try:
+        VIRTUAL_SECURE_PIN = str(st.secrets["virtual"]["pin"])
+    except (KeyError, FileNotFoundError):
+        VIRTUAL_SECURE_PIN = None
 
     if login_button:
+        now = time.time()
+        st.session_state.login_attempts = [
+            t for t in st.session_state.login_attempts if now - t < 300
+        ]
+        
+        if len(st.session_state.login_attempts) >= 5:
+            wait = int(300 - (now - st.session_state.login_attempts[0]))
+            st.error(f"登入嘗試次數過多，請 {wait} 秒後再試。(Too many attempts, wait {wait}s)")
+            return
+
+
         is_virtual = (user_id == 'demo' and user_pin == VIRTUAL_SECURE_PIN and VIRTUAL_SECURE_PIN is not None)
         is_teacher = (user_id == 'teacher' and user_pin == TEACHER_SECURE_PIN and TEACHER_SECURE_PIN is not None)
         
@@ -49,6 +67,7 @@ def render_login_ui(df):
             s_data = df[(df['StudentID'] == user_id) & (df['Pin'] == user_pin)]
             if s_data.empty:
                 st.error("學號或密碼錯誤，請重新確認。(Invalid ID or PIN.)")
+                st.session_state.login_attempts.append(time.time())
                 st.session_state.logged_in = False
             else:
                 st.session_state.logged_in = True

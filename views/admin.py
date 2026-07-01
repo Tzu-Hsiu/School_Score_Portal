@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from reports.html_generator import generate_html_reports
+from core.constants import EXCLUDE_STATS
 
 def render(df, col_info, available_exams, exclude_stats):
     st.success("👨‍🏫 歡迎進入教師管理後台 (Teacher Admin Panel)！")
@@ -32,7 +33,7 @@ def render(df, col_info, available_exams, exclude_stats):
                 if not prev_exam_cols.empty:
                     prev_map = {row['Subject']: row['Original_Col'] for idx, row in prev_exam_cols.iterrows()}
                     
-                    for subj in ['總分', '平均', '班排']:
+                    for subj in EXCLUDE_STATS:
                         if subj in transcript_df.columns and subj in prev_map:
                             prev_col = prev_map[subj]
                             prev_scores = df.set_index('StudentID')[prev_col]
@@ -40,7 +41,7 @@ def render(df, col_info, available_exams, exclude_stats):
                             mapped_prev = transcript_df['StudentID'].map(prev_scores)
                             
                             diff_col_name = f'{subj} 進退步'
-                            if subj == '班排': 
+                            if subj in ('班排', '校排'): 
                                 diff = mapped_prev - curr_scores
                             else:
                                 diff = curr_scores - mapped_prev
