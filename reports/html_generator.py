@@ -244,7 +244,10 @@ def generate_html_reports(exam_label, df_source_student, df_source_class, col_in
             'charts': charts
         })
         
-    env = Environment(loader=FileSystemLoader('reports/templates'))
+    import os
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    template_dir = os.path.join(current_dir, 'templates')
+    env = Environment(loader=FileSystemLoader(template_dir))
     template = env.get_template('report_card.html')
     return template.render(
         exam_label=exam_label,
