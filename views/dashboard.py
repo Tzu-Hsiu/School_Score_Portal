@@ -216,7 +216,7 @@ def _render_overview_charts(stats_df, box_x, box_y, stu_x, stu_y, dist_dict, is_
     st.write("**👥 班級各科成績區間分布人數 (Score Distribution)**")
     if dist_dict:
         dist_df = pd.DataFrame(dist_dict, index=SCORE_BIN_LABELS)
-        st.dataframe(dist_df.style.background_gradient(cmap='Blues', axis=1), use_container_width=True)
+        st.dataframe(dist_df, use_container_width=True)
         
         fig_dist = create_distribution_chart(dist_dict, list(dist_dict.keys()))
         st.plotly_chart(fig_dist, use_container_width=True)
