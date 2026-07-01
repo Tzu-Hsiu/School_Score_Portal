@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>個人成績分析報告</title>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; background-color: #f4f4f9; }
+        .page { page-break-after: always; background: white; margin: 0 auto 20px auto; max-width: 1000px; padding: 40px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        @media print { body { background-color: white; } .page { margin: 0; padding: 20px; box-shadow: none; max-width: 100%; border: none; } }
+        .header { text-align: center; margin-bottom: 20px; border-bottom: 3px solid #2c3e50; padding-bottom: 10px; }
+        .header h2 { margin: 0; color: #2c3e50; font-size: 26px; }
+        .header h3 { margin: 10px 0 0 0; color: #7f8c8d; font-size: 18px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        th { background-color: #34495e; color: white; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .kpi-container { display: flex; justify-content: space-around; margin-bottom: 20px; background: #ecf0f1; padding: 15px; border-radius: 10px; }
+        .kpi { text-align: center; }
+        .kpi-title { font-size: 14px; color: #7f8c8d; font-weight: bold; margin-bottom: 5px; }
+        .kpi-val { font-size: 24px; font-weight: bold; color: #2980b9; margin-bottom: 5px; }
+        .kpi-prog { font-size: 14px; font-weight: bold; margin-bottom: 4px; }
+        .kpi-top-pct { font-size: 14px; color: #7f8c8d; }
+        .charts-wrapper { display: flex; flex-direction: column; gap: 30px; margin-top: 30px; }
+        .chart-row { display: flex; flex-direction: row; align-items: center; justify-content: space-between; gap: 20px; padding: 20px; background: #fafafa; border-radius: 8px; page-break-inside: avoid; border: 1px solid #eee; }
+        .chart-desc { flex: 1; font-size: 14px; color: #444; line-height: 1.6; }
+        .chart-desc h4 { color: #2980b9; margin-top: 0; margin-bottom: 10px; font-size: 18px; border-bottom: 2px solid #2980b9; padding-bottom: 5px; display: inline-block; }
+        .chart-item { flex: 2; height: 350px; min-width: 0; }
+        @media print { .chart-row { flex-direction: row; } .chart-item { width: 65%; } .chart-desc { width: 30%; } }
+    </style>
+</head>
+<body>
+{% for student in students %}
+<div class="page">
+    <div class="header">
+        <h2>{{ exam_label }} - 個人成績分析報告</h2>
+        <h3>{{ student.name }} (學號: {{ student.id }})</h3>
+    </div>
+
+    <div class="kpi-container">
+        {% for kpi in student.kpis %}
+        <div class="kpi">
+            <div class="kpi-title">{{ kpi.title }}</div>
+            <div class="kpi-val">{{ kpi.value }}</div>
+            {{ kpi.progress_html | safe }}
+        </div>
+        {% endfor %}
+    </div>
+
+    <table>
+        <tr>
+            <th>科目</th><th>分數</th><th>班級平均</th>
+            <th>排除0分平均</th>
+            {% if prev_exam_label %}
+            <th>前次分數<br>({{ prev_exam_label.split(' ')[-1] }})</th><th>進退步</th>
+            {% endif %}
+            <th>Z分數</th><th>PR值</th>
+        </tr>
+        {% for row in student.score_rows %}
+        <tr>
+            <td>{{ row.subject }}</td>
+            <td>{{ row.score }}</td>
+            <td>{{ row.mean }}</td>
+            <td>{{ row.adj_mean }}</td>
+            {% if prev_exam_label %}
+            {{ row.progression_html | safe }}
+            {% endif %}
+            <td style='{{ row.z_color }}'>{{ row.z_score }}</td>
+            <td>{{ row.pr }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <div class="charts-wrapper">
+    {% for chart in student.charts %}
+    <div class="chart-row">
+        <div class="chart-desc">{{ chart.description | safe }}</div>
+        <div id="{{ chart.id }}" class="chart-item"></div>
+    </div>
+    <script>
+        var chartData_{{ chart.id }} = {{ chart.json | safe }};
+        Plotly.newPlot('{{ chart.id }}', chartData_{{ chart.id }}.data, chartData_{{ chart.id }}.layout, {displayModeBar: false});
+    </script>
+    {% endfor %}
+    </div>
+</div>
+{% endfor %}
+</body>
+</html>
