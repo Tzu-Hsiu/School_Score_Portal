@@ -2,8 +2,7 @@ import streamlit as st
 import pandas as pd
 from core.data_loader import initialize_data
 from core.auth import init_session_state, render_login_ui
-from views import admin
-from views import dashboard
+from views import admin, dashboard, mock_admin, mock_dashboard
 
 # Ensure pandas doesn't throw warnings for future downcasting behavior
 pd.set_option('future.no_silent_downcasting', True)
@@ -37,7 +36,21 @@ if st.session_state.logged_in:
     student_data = st.session_state.student_data
     student_name = st.session_state.student_name
 
-    if is_teacher:
-        admin.render(df, col_info, available_exams, exclude_stats)
+    category = st.radio(
+        "選擇查詢項目 (Category)",
+        ["📝 定期評量 (Regular Exams)", "🎯 會考模擬考 (Mock Exams)"],
+        horizontal=True,
+        label_visibility="collapsed"
+    )
+    st.markdown("---")
+
+    if category == "📝 定期評量 (Regular Exams)":
+        if is_teacher:
+            admin.render(df, col_info, available_exams, exclude_stats)
+        else:
+            dashboard.render(df, col_info, available_exams, exclude_stats, is_virtual, student_data, student_name)
     else:
-        dashboard.render(df, col_info, available_exams, exclude_stats, is_virtual, student_data, student_name)
+        if is_teacher:
+            mock_admin.render(df, col_info, exclude_stats)
+        else:
+            mock_dashboard.render(df, col_info, exclude_stats, is_virtual, student_data, student_name)

@@ -1,26 +1,38 @@
 # Streamlit secrets (CRITICAL)
 .streamlit/secrets.toml
+.streamlit/
 
-# Google Cloud credentials files
+# Google Cloud credentials and keys
 *.json
+*.pem
+*.key
+*.p12
 
-# Local data files / Student PII
+# Environment variables
+.env
+.env.*
+
+# Local data files / Student PII / Vendor files
+data/
+data/mock_exams/
 *.csv
+*.xls
 *.xlsx
 *.html
+!reports/templates/*.html
 
 # Python standard ignores
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
 .venv/
 venv/
-.env
+ENV/
 
-# QR code images
-*.png
-
-# VS Code settings
-.vscode/
-
-# Mac OS
+# OS / Editor files
 .DS_Store
+.vscode/
+*.png
